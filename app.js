@@ -5,7 +5,9 @@ const methodOverride = require('method-override');
 
 const ejs = require('ejs');
 const path = require('path');
-const fs = require('fs');
+
+const photoController = require('./controllers/photoControllers');
+const pageController = require('./controllers/pageControllers');
 
 //Mongoose models
 const Photo = require('./models/Photo');
@@ -41,73 +43,17 @@ app.use(
 );
 
 // Routes
-app.get('/', async (req, res) => {
-  const photos = await Photo.find({});
-  //res.sendFile(path.resolve(__dirname, 'temp/index.html'));
-  res.render('index', {
-    photos,
-  });
-});
+app.get('/', photoController.getAllPhotos);
+app.post('/photos', photoController.createPhoto);
+app.get('/photos/:id', photoController.getPhoto);
+app.put('/photos/:id', photoController.updatePhoto);
+app.delete('/photos/:id', photoController.deletePhoto);
 
-app.get('/about', (req, res) => {
-  res.render('about');
-});
+app.get('/about', pageController.getAboutPage);
 
-app.get('/add', (req, res) => {
-  res.render('add');
-});
+app.get('/add', pageController.getAddPage);
 
-app.get('/photos/edit/:id', async (req, res) => {
-  const photo = await Photo.findById(req.params.id);
-  res.render('edit', {
-    photo,
-  });
-});
-
-app.post('/photos', async (req, res) => {
-  //Eğer klasör yoksa oluşturacak
-  const uploadDir = 'public/uploads';
-  if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
-  }
-  // Yükeldiğimiz dosyayı yakalayıp isteiğimiz bilgileri değişkenleri aktarıyoruz
-  let uploadeImage = req.files.image;
-  let uploadPath = __dirname + '/public/uploads/' + uploadeImage.name;
-
-  // Yakaladığımız dosyayı .mv metodu ile yukarda belirlediğimiz path'a taşıyoruz. Dosya taşıma işlemi sırasında hata olmadı ise req.body ve içerisindeki image'nin dosya yolu ve adıyla beraber database kaydediyoruz
-  uploadeImage.mv(uploadPath, async err => {
-    if (err) console.log(err); // Bu kısımda önemli olan add.ejs'nin içerisine form elemanı olarak encType="multipart/form-data" atribute eklemek
-    await Photo.create({
-      ...req.body,
-      image: '/uploads/' + uploadeImage.name,
-    });
-  });
-  res.redirect('/');
-});
-
-app.get('/photos/:id', async (req, res) => {
-  //const photo = photos.find(photo => photo.id === parseInt(req.params.id));
-  const photo = await Photo.findById({ _id: req.params.id });
-  res.render('photo', {
-    photo,
-  });
-});
-
-app.put('/photos/:id', async (req, res) => {
-  const photo = await Photo.findById(req.params.id);
-  photo.title = req.body.title;
-  photo.description = req.body.description;
-  await photo.save();
-  res.redirect(`/photos/${req.params.id}`);
-});
-
-app.delete('/photos/:id', async (req, res) => {
-  const photo = await Photo.findOne({ _id: req.params.id });
-  let deleteImage = __dirname + '/public' + photo.image;
-  fs.unlinkSync(deleteImage);
-  await Photo.findByIdAndDelete({ _id: req.params.id });
-  res.redirect('/');
-});
+app.get('/photos/edit/:id', pageController.getEditPage);
 
 const port = 3010;
 app.listen(port, () => console.log(`Listening on port ${port}...`));
